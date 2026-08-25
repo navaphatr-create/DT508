@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face Props AR - แต่งหน้าด้วย AI</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-color: #F8FAFC;
+      --text-color: #334155;
+      --accent-color: #3B82F6;
+      --danger-color: #EF4444;
+      --panel-bg: #FFFFFF;
+      --border-color: #E2E8F0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Kanit', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      width: 100%;
+      max-width: 800px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 5px 0;
+      font-weight: 600;
+      font-size: 2rem;
+    }
+    
+    p.subtitle {
+      margin: 0 0 15px 0;
+      color: #64748B;
+    }
+
+    /* Game / Camera Container */
+    #game-container {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 4/3;
+      background: #CBD5E1; 
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    #placeholder-text {
+      position: absolute;
+      z-index: 10;
+      font-size: 1.5rem;
+      color: #475569;
+      font-weight: 500;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    video { display: none; } 
+
+    canvas#output_canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0; 
+      transition: opacity 0.3s ease;
+      z-index: 5;
+    }
+
+    /* Start Button Area */
+    .start-controls {
+      display: flex;
+      justify-content: center;
+      height: 50px;
+      margin-bottom: 30px;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    button {
+      font-family: 'Kanit', sans-serif;
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 0 40px;
+      font-size: 1.2rem;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+      transition: all 0.2s;
+      height: 100%;
+      min-width: 200px;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #2563EB;
+      transform: translateY(-2px);
+    }
+
+    button:disabled {
+      background-color: #94A3B8;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* Prop Manager UI */
+    .manager-section {
+      width: 100%;
+      max-width: 800px;
+      background: var(--panel-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 40px;
+    }
+
+    .manager-section h2 {
+      margin: 0 0 15px 0;
+      font-size: 1.4rem;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    .add-prop-form {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    select {
+      font-family: 'Kanit', sans-serif;
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      font-size: 1rem;
+      outline: none;
+      color: var(--text-color);
+      flex: 1;
+      min-width: 150px;
+    }
+
+    /* Custom File Input Upload Button */
+    input[type="file"] {
+      display: none;
+    }
+    .upload-btn {
+      background-color: var(--panel-bg);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.2s;
+      display: inline-block;
+      min-width: 150px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .upload-btn:hover {
+      background-color: var(--bg-color);
+    }
+
+    .prop-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .prop-item {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--bg-color);
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .prop-preview {
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+      border-radius: 8px;
+      background: white;
+      padding: 2px;
+      border: 1px solid var(--border-color);
+    }
+
+    .prop-info {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .prop-info h3 {
+      margin: 0 0 10px 0;
+      font-size: 1.1rem;
+    }
+
+    .slider-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 5px;
+      font-size: 0.9rem;
+    }
+
+    .slider-group label {
+      width: 60px;
+      color: #64748B;
+    }
+
+    /* Cross-Browser Minimal Sliders */
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+    
+    input[type=range]:focus {
+      outline: none;
+    }
+
+    /* WebKit (Chrome/Safari) */
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 4px;
+      cursor: pointer;
+      background: var(--border-color);
+      border-radius: 2px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -6px; /* Center thumb vertically */
+    }
+
+    /* Firefox / Zen Browser */
+    input[type=range]::-moz-range-track {
+      width: 100%;
+      height: 4px;
+      cursor: pointer;
+      background: var(--border-color);
+      border-radius: 2px;
+    }
+    input[type=range]::-moz-range-thumb {
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      cursor: pointer;
+      border: none;
+    }
+
+    .delete-btn {
+      background-color: var(--danger-color);
+      padding: 8px 16px;
+      font-size: 1rem;
+      min-width: auto;
+      box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.3);
+    }
+    .delete-btn:hover {
+      background-color: #DC2626;
+    }
+
+    .empty-msg {
+      text-align: center;
+      color: #94A3B8;
+      font-style: italic;
+      padding: 10px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Face Props AR</h1>
+    <p class="subtitle">อัปโหลดรูปภาพและติดลงบนใบหน้าของคุณแบบเรียลไทม์</p>
+  </header>
+
+  <div id="game-container">
+    <div id="placeholder-text">กำลังโหลด AI...</div>
+    <video id="webcam" autoplay playsinline></video>
+    <canvas id="output_canvas"></canvas>
+  </div>
+
+  <div class="start-controls">
+    <button id="start-btn" disabled>โหลดโมเดล...</button>
+  </div>
+
+  <div class="manager-section">
+    <h2>จัดการรูปภาพ (Props)</h2>
+    
+    <div class="add-prop-form">
+      <select id="landmark-select">
+        <option value="nose">จมูก (Nose)</option>
+        <option value="forehead">หน้าผาก (Forehead)</option>
+        <option value="leftEye">ตาซ้าย (Left Eye)</option>
+        <option value="rightEye">ตาขวา (Right Eye)</option>
+        <option value="leftCheek">แก้มซ้าย (Left Cheek)</option>
+        <option value="rightCheek">แก้มขวา (Right Cheek)</option>
+        <option value="mouth">ปาก (Mouth)</option>
+      </select>
+      
+      <label class="upload-btn">
+        <input type="file" id="image-upload" accept="image/png, image/jpeg, image/gif, image/webp">
+        อัปโหลดรูปภาพ...
+      </label>
+    </div>
+
+    <div class="prop-list" id="prop-list-container">
+      <div class="empty-msg">ยังไม่มีรูปภาพ กรุณาอัปโหลดรูปภาพด้านบน</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import vision from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm";
+    const { FaceLandmarker, FilesetResolver } = vision;
+
+    const video = document.getElementById("webcam");
+    const canvasElement = document.getElementById("output_canvas");
+    const canvasCtx = canvasElement.getContext("2d");
+    const startBtn = document.getElementById("start-btn");
+    const placeholderText = document.getElementById("placeholder-text");
+    
+    // UI Elements for Manager
+    const imageUpload = document.getElementById("image-upload");
+    const landmarkSelect = document.getElementById("landmark-select");
+    const propListContainer = document.getElementById("prop-list-container");
+
+    let faceLandmarker = undefined;
+    let lastVideoTime = -1;
+    let cameraActive = false;
+    
+    // Anti-blip state
+    let lastFaceLandmarks = null;
+    let missingFrames = 0;
+    const MAX_MISSING_FRAMES = 5;
+
+    // Active Props Array
+    let activeProps = [];
+
+    // MediaPipe Face Landmarks Mapping (Standard Indices)
+    const LANDMARK_MAP = {
+      nose: 1,           
+      forehead: 10,      
+      leftEye: 159,      
+      rightEye: 386,     
+      leftCheek: 205,    
+      rightCheek: 425,   
+      mouth: 14          
+    };
+
+    const NAME_MAP = {
+      nose: "จมูก", forehead: "หน้าผาก", leftEye: "ตาซ้าย", rightEye: "ตาขวา", 
+      leftCheek: "แก้มซ้าย", rightCheek: "แก้มขวา", mouth: "ปาก"
+    };
+
+    async function initializeAI() {
+      const fileset = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+      );
+      
+      faceLandmarker = await FaceLandmarker.createFromOptions(fileset, {
+        baseOptions: {
+          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numFaces: 1
+      });
+
+      placeholderText.innerText = "รอการเปิดกล้อง...";
+      startBtn.innerText = "เปิดกล้องเพื่อใช้งาน";
+      startBtn.disabled = false;
+    }
+
+    initializeAI();
+
+    startBtn.addEventListener("click", () => {
+      if (!faceLandmarker) return;
+
+      startBtn.disabled = true;
+      startBtn.innerText = "กำลังเชื่อมต่อกล้อง...";
+
+      if (!cameraActive) {
+        navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+          video.srcObject = stream;
+          video.addEventListener("loadeddata", () => {
+            cameraActive = true;
+            canvasElement.width = video.videoWidth;
+            canvasElement.height = video.videoHeight;
+            
+            placeholderText.style.display = "none";
+            canvasElement.style.opacity = "1";
+            
+            document.querySelector('.start-controls').style.display = 'none';
+            
+            predictWebcam();
+          });
+        }).catch(err => {
+          placeholderText.innerText = "ไม่สามารถเปิดกล้องได้";
+          startBtn.disabled = false;
+          startBtn.innerText = "ลองอีกครั้ง";
+        });
+      }
+    });
+
+    // --- File Upload & Prop Management ---
+
+    imageUpload.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const type = landmarkSelect.value;
+
+      // Remove existing prop on the same spot to enforce 1-to-1 rule
+      activeProps = activeProps.filter(p => p.type !== type);
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const newProp = {
+            id: Date.now(),
+            img: img,
+            type: type,
+            typeName: NAME_MAP[type],
+            size: 0.3,      
+            opacity: 1.0    
+          };
+          
+          activeProps.push(newProp);
+          renderPropsUI();
+          imageUpload.value = ""; 
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function deleteProp(id) {
+      activeProps = activeProps.filter(p => p.id !== id);
+      renderPropsUI();
+    }
+
+    function updateProp(id, key, value) {
+      const prop = activeProps.find(p => p.id === id);
+      if (prop) {
+        prop[key] = parseFloat(value);
+      }
+    }
+
+    function renderPropsUI() {
+      propListContainer.innerHTML = "";
+      
+      if (activeProps.length === 0) {
+        propListContainer.innerHTML = `<div class="empty-msg">ยังไม่มีรูปภาพ กรุณาอัปโหลดรูปภาพด้านบน</div>`;
+        return;
+      }
+
+      activeProps.forEach(prop => {
+        const item = document.createElement("div");
+        item.className = "prop-item";
+        
+        item.innerHTML = `
+          <img src="${prop.img.src}" class="prop-preview" alt="preview">
+          <div class="prop-info">
+            <h3>ติดที่: ${prop.typeName}</h3>
+            
+            <div class="slider-group">
+              <label>ขนาด</label>
+              <input type="range" min="0.05" max="1.5" step="0.05" value="${prop.size}" 
+                     oninput="updatePropInstance(${prop.id}, 'size', this.value)">
+            </div>
+            
+            <div class="slider-group">
+              <label>ความโปร่ง</label>
+              <input type="range" min="0.1" max="1.0" step="0.05" value="${prop.opacity}"
+                     oninput="updatePropInstance(${prop.id}, 'opacity', this.value)">
+            </div>
+          </div>
+          <button class="delete-btn" onclick="deletePropInstance(${prop.id})">ลบ</button>
+        `;
+        propListContainer.appendChild(item);
+      });
+    }
+
+    window.updatePropInstance = updateProp;
+    window.deletePropInstance = deleteProp;
+
+    // --- MediaPipe Rendering ---
+
+    async function predictWebcam() {
+      if (!cameraActive) return;
+      
+      let startTimeMs = performance.now();
+      let results = undefined;
+      
+      if (video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        results = faceLandmarker.detectForVideo(video, startTimeMs);
+      }
+
+      // Draw the raw camera feed as a mirror
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.translate(canvasElement.width, 0);
+      canvasCtx.scale(-1, 1);
+      canvasCtx.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.restore();
+
+      // Implement frame smoothing (Anti-blip)
+      let currentLandmarks = null;
+      if (results && results.faceLandmarks && results.faceLandmarks.length > 0) {
+        currentLandmarks = results.faceLandmarks[0];
+        lastFaceLandmarks = currentLandmarks;
+        missingFrames = 0;
+      } else {
+        if (lastFaceLandmarks && missingFrames < MAX_MISSING_FRAMES) {
+          currentLandmarks = lastFaceLandmarks;
+          missingFrames++;
+        } else {
+          lastFaceLandmarks = null;
+        }
+      }
+
+      if (currentLandmarks) {
+        // 1. Calculate Face Width
+        const leftTemple = currentLandmarks[234];
+        const rightTemple = currentLandmarks[454];
+        
+        const mxLeft = (1 - leftTemple.x) * canvasElement.width;
+        const myLeft = leftTemple.y * canvasElement.height;
+        const mxRight = (1 - rightTemple.x) * canvasElement.width;
+        const myRight = rightTemple.y * canvasElement.height;
+        
+        const faceWidth = Math.hypot(mxRight - mxLeft, myRight - myLeft);
+
+        // 2. Calculate Face Rotation
+        const eyeL = currentLandmarks[33];
+        const eyeR = currentLandmarks[263];
+        const mxEyeL = (1 - eyeL.x);
+        const myEyeL = eyeL.y;
+        const mxEyeR = (1 - eyeR.x);
+        const myEyeR = eyeR.y;
+        
+        const tiltAngle = Math.atan2(myEyeR - myEyeL, mxEyeR - mxEyeL);
+
+        // 3. Draw each active prop
+        activeProps.forEach(prop => {
+          const index = LANDMARK_MAP[prop.type];
+          const point = currentLandmarks[index];
+          
+          if (point) {
+            const targetX = (1 - point.x) * canvasElement.width;
+            const targetY = point.y * canvasElement.height;
+
+            const imgWidth = faceWidth * prop.size;
+            const imgHeight = imgWidth * (prop.img.height / prop.img.width);
+
+            canvasCtx.save();
+            canvasCtx.globalAlpha = prop.opacity;
+            
+            canvasCtx.translate(targetX, targetY);
+            canvasCtx.rotate(tiltAngle);
+            canvasCtx.drawImage(prop.img, -imgWidth / 2, -imgHeight / 2, imgWidth, imgHeight);
+            
+            canvasCtx.restore();
+          }
+        });
+      }
+
+      window.requestAnimationFrame(predictWebcam);
+    }
+  </script>
+</body>
+</html>

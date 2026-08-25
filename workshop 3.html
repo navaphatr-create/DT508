@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Hand Inspector - วิเคราะห์มือ</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #F8FAFC;
+      --text-color: #334155;
+      --accent-color: #3B82F6;
+      --success-color: #10B981;
+      --panel-bg: #FFFFFF;
+      --border-color: #E2E8F0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Kanit', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      width: 100%;
+      max-width: 800px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 5px 0;
+      font-weight: 600;
+      font-size: 2rem;
+    }
+    
+    p.subtitle {
+      margin: 0 0 15px 0;
+      color: #64748B;
+    }
+
+    /* Stats Panel */
+    .stats-panel {
+      background: var(--panel-bg);
+      padding: 15px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .stat-box {
+      font-size: 1.1rem;
+      font-weight: 500;
+      text-align: center;
+    }
+
+    .stat-box span {
+      font-weight: 600;
+      font-size: 2rem;
+      display: block;
+      color: var(--accent-color);
+    }
+
+    /* Toggle Controls Panel */
+    .options-panel {
+      background: var(--panel-bg);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    .options-title {
+      margin: 0 0 15px 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    .toggle-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+    }
+
+    /* Custom Checkbox as Pill Toggle */
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      background: var(--bg-color);
+      padding: 8px 20px;
+      border-radius: 50px;
+      border: 1px solid var(--border-color);
+      font-weight: 500;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    
+    .toggle-label input {
+      display: none;
+    }
+
+    /* Checked State Styling */
+    .toggle-label:has(input:checked) {
+      background: var(--accent-color);
+      color: white;
+      border-color: var(--accent-color);
+      box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+    }
+
+    .start-controls {
+      display: flex;
+      justify-content: center;
+      height: 50px;
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    button {
+      font-family: 'Kanit', sans-serif;
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 0 40px;
+      font-size: 1.2rem;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+      transition: all 0.2s;
+      height: 100%;
+      min-width: 200px;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #2563EB;
+      transform: translateY(-2px);
+    }
+
+    button:disabled {
+      background-color: #94A3B8;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* Camera Container */
+    #game-container {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 4/3;
+      background: #CBD5E1; 
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    #placeholder-text {
+      position: absolute;
+      z-index: 10;
+      font-size: 1.5rem;
+      color: #475569;
+      font-weight: 500;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    video { display: none; } 
+
+    canvas#output_canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0; 
+      transition: opacity 0.3s ease;
+      z-index: 5;
+    }
+
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Multi-Hand Inspector</h1>
+    <p class="subtitle">ระบบวิเคราะห์และตรวจจับมือหลายเป้าหมายพร้อมกัน (สูงสุด 6 มือ)</p>
+  </header>
+
+  <div class="stats-panel">
+    <div class="stat-box">ตรวจพบมือ (Hands Detected)<span id="hand-count">0</span></div>
+  </div>
+
+  <div class="options-panel">
+    <h2 class="options-title">เลือกการแสดงผล (Display Options)</h2>
+    <div class="toggle-group">
+      <label class="toggle-label">
+        <input type="checkbox" id="opt-box" checked> กรอบ (Bounding Box)
+      </label>
+      <label class="toggle-label">
+        <input type="checkbox" id="opt-skeleton" checked> กระดูก (Skeleton Lines)
+      </label>
+      <label class="toggle-label">
+        <input type="checkbox" id="opt-joints" checked> ข้อต่อ (Joints)
+      </label>
+    </div>
+  </div>
+
+  <div class="start-controls">
+    <button id="start-btn" disabled>กำลังโหลด AI...</button>
+  </div>
+
+  <div id="game-container">
+    <div id="placeholder-text">รอการเปิดกล้อง...</div>
+    <video id="webcam" autoplay playsinline></video>
+    <canvas id="output_canvas"></canvas>
+  </div>
+
+  <script type="module">
+    import vision from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm";
+    const { HandLandmarker, FilesetResolver } = vision;
+
+    const video = document.getElementById("webcam");
+    const canvasElement = document.getElementById("output_canvas");
+    const canvasCtx = canvasElement.getContext("2d");
+    
+    const startBtn = document.getElementById("start-btn");
+    const placeholderText = document.getElementById("placeholder-text");
+    const handCountElement = document.getElementById("hand-count");
+
+    // UI Toggles
+    const optBox = document.getElementById("opt-box");
+    const optSkeleton = document.getElementById("opt-skeleton");
+    const optJoints = document.getElementById("opt-joints");
+
+    let handLandmarker = undefined;
+    let lastVideoTime = -1;
+    let cameraActive = false;
+    
+    // Anti-blip state
+    let lastHands = [];
+    let missingFrames = 0;
+    const MAX_MISSING_FRAMES = 5;
+
+    // Hand Skeleton Connections Mapping
+    const HAND_CONNECTIONS = [
+      [0,1], [1,2], [2,3], [3,4],       // Thumb
+      [0,5], [5,6], [6,7], [7,8],       // Index
+      [5,9], [9,10], [10,11], [11,12],  // Middle
+      [9,13], [13,14], [14,15], [15,16],// Ring
+      [13,17], [17,18], [18,19], [19,20],// Pinky
+      [0,17]                            // Palm base
+    ];
+
+    async function initializeAI() {
+      const fileset = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+      );
+      
+      handLandmarker = await HandLandmarker.createFromOptions(fileset, {
+        baseOptions: {
+          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numHands: 6 // Set to detect many hands
+      });
+
+      placeholderText.innerText = "พร้อมใช้งาน";
+      startBtn.innerText = "เปิดกล้อง";
+      startBtn.disabled = false;
+    }
+
+    initializeAI();
+
+    startBtn.addEventListener("click", () => {
+      if (!handLandmarker) return;
+
+      startBtn.disabled = true;
+      startBtn.innerText = "กำลังเชื่อมต่อกล้อง...";
+
+      if (!cameraActive) {
+        navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+          video.srcObject = stream;
+          video.addEventListener("loadeddata", () => {
+            cameraActive = true;
+            canvasElement.width = video.videoWidth;
+            canvasElement.height = video.videoHeight;
+            
+            placeholderText.style.display = "none";
+            canvasElement.style.opacity = "1";
+            document.querySelector('.start-controls').style.display = 'none';
+            
+            predictWebcam();
+          });
+        }).catch(err => {
+          placeholderText.innerText = "ไม่สามารถเปิดกล้องได้";
+          startBtn.disabled = false;
+          startBtn.innerText = "ลองอีกครั้ง";
+        });
+      }
+    });
+
+    // Helper: Draw Bounding Box around a hand
+    function drawBoundingBox(landmarks) {
+      let minX = Infinity, minY = Infinity;
+      let maxX = -Infinity, maxY = -Infinity;
+
+      landmarks.forEach(p => {
+        const px = (1 - p.x) * canvasElement.width;
+        const py = p.y * canvasElement.height;
+        if (px < minX) minX = px;
+        if (px > maxX) maxX = px;
+        if (py < minY) minY = py;
+        if (py > maxY) maxY = py;
+      });
+
+      // Padding
+      const padding = 20;
+      minX -= padding; minY -= padding;
+      maxX += padding; maxY += padding;
+
+      canvasCtx.strokeStyle = "rgba(59, 130, 246, 0.8)"; // Blue
+      canvasCtx.lineWidth = 3;
+      canvasCtx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+      
+      // Corner Accents
+      canvasCtx.fillStyle = "rgba(59, 130, 246, 1)";
+      const cornerSize = 10;
+      canvasCtx.fillRect(minX - 2, minY - 2, cornerSize, cornerSize); 
+      canvasCtx.fillRect(maxX - cornerSize + 2, minY - 2, cornerSize, cornerSize); 
+      canvasCtx.fillRect(minX - 2, maxY - cornerSize + 2, cornerSize, cornerSize); 
+      canvasCtx.fillRect(maxX - cornerSize + 2, maxY - cornerSize + 2, cornerSize, cornerSize); 
+    }
+
+    // Helper: Draw Skeleton lines
+    function drawSkeleton(landmarks) {
+      canvasCtx.strokeStyle = "rgba(255, 255, 255, 0.8)"; // White lines
+      canvasCtx.lineWidth = 4;
+      canvasCtx.beginPath();
+      
+      for (const [startIdx, endIdx] of HAND_CONNECTIONS) {
+        const p1 = landmarks[startIdx];
+        const p2 = landmarks[endIdx];
+        
+        const x1 = (1 - p1.x) * canvasElement.width;
+        const y1 = p1.y * canvasElement.height;
+        const x2 = (1 - p2.x) * canvasElement.width;
+        const y2 = p2.y * canvasElement.height;
+
+        canvasCtx.moveTo(x1, y1);
+        canvasCtx.lineTo(x2, y2);
+      }
+      canvasCtx.stroke();
+    }
+
+    // Helper: Draw Joint Dots
+    function drawJoints(landmarks) {
+      canvasCtx.fillStyle = "rgba(16, 185, 129, 1)"; // Green joints
+      for (const p of landmarks) {
+        const x = (1 - p.x) * canvasElement.width;
+        const y = p.y * canvasElement.height;
+        canvasCtx.beginPath();
+        canvasCtx.arc(x, y, 5, 0, 2 * Math.PI);
+        canvasCtx.fill();
+        
+        // Add a small white border to each dot for pop
+        canvasCtx.strokeStyle = "#FFFFFF";
+        canvasCtx.lineWidth = 1;
+        canvasCtx.stroke();
+      }
+    }
+
+    async function predictWebcam() {
+      if (!cameraActive) return;
+      
+      let startTimeMs = performance.now();
+      let results = undefined;
+      
+      if (video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        results = handLandmarker.detectForVideo(video, startTimeMs);
+      }
+
+      // Draw Mirrored Video
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.translate(canvasElement.width, 0);
+      canvasCtx.scale(-1, 1);
+      canvasCtx.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.restore();
+
+      // Anti-blip Frame Smoothing
+      let currentHands = [];
+      if (results && results.landmarks && results.landmarks.length > 0) {
+        currentHands = results.landmarks;
+        lastHands = currentHands;
+        missingFrames = 0;
+      } else {
+        if (lastHands.length > 0 && missingFrames < MAX_MISSING_FRAMES) {
+          currentHands = lastHands; // Carry over last known frame
+          missingFrames++;
+        } else {
+          lastHands = [];
+        }
+      }
+
+      // Update UI Count
+      handCountElement.innerText = currentHands.length;
+
+      // Darken video slightly if hands are detected to make AR pop
+      if (currentHands.length > 0) {
+        canvasCtx.fillStyle = "rgba(0, 0, 0, 0.2)";
+        canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+      }
+
+      // Render each active hand
+      for (const landmarks of currentHands) {
+        if (optBox.checked) {
+          drawBoundingBox(landmarks);
+        }
+        
+        if (optSkeleton.checked) {
+          drawSkeleton(landmarks);
+        }
+
+        if (optJoints.checked) {
+          drawJoints(landmarks);
+        }
+      }
+
+      window.requestAnimationFrame(predictWebcam);
+    }
+  </script>
+</body>
+</html>

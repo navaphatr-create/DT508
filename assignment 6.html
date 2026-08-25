@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>กายภาพบำบัดมือ - นับการกำแบ (Hand PT Tracker)</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js for the Graph -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #F8FAFC;
+      --text-color: #334155;
+      --accent-color: #3B82F6;
+      --success-color: #10B981;
+      --warning-color: #F59E0B;
+      --panel-bg: #FFFFFF;
+      --border-color: #E2E8F0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Kanit', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      width: 100%;
+      max-width: 800px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 5px 0;
+      font-weight: 600;
+      font-size: 2rem;
+    }
+    
+    p.subtitle {
+      margin: 0 0 15px 0;
+      color: #64748B;
+    }
+
+    .stats-panel {
+      background: var(--panel-bg);
+      padding: 15px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+    }
+
+    .stats-container {
+      display: flex;
+      justify-content: space-around;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .stat-box {
+      font-size: 1.1rem;
+      font-weight: 500;
+      text-align: center;
+      flex: 1;
+    }
+
+    .stat-box span {
+      font-weight: 600;
+      font-size: 1.6rem;
+      display: block;
+    }
+
+    #reps-left { color: var(--accent-color); }
+    #stopwatch { color: #334155; }
+    #hand-status { color: #8B5CF6; font-size: 1.2rem; }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      height: 50px; 
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      display: flex;
+      align-items: center;
+      background: white;
+      padding: 5px 15px;
+      border-radius: 50px;
+      box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05);
+      height: 100%;
+      border: 1px solid var(--border-color);
+    }
+    
+    .input-group label {
+      font-weight: 500;
+      margin-right: 10px;
+    }
+
+    .input-group input {
+      font-family: 'Kanit', sans-serif;
+      width: 60px;
+      border: none;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--accent-color);
+      text-align: center;
+      outline: none;
+    }
+
+    button {
+      font-family: 'Kanit', sans-serif;
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 0 40px;
+      font-size: 1.2rem;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+      transition: all 0.2s;
+      height: 100%;
+      min-width: 150px;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #2563EB;
+      transform: translateY(-2px);
+    }
+
+    button:disabled {
+      background-color: #94A3B8;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    #game-container {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 4/3;
+      background: #CBD5E1; 
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    .progress-bar-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 14px;
+      background: rgba(0, 0, 0, 0.3);
+      z-index: 20;
+    }
+
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background-color: var(--accent-color);
+      transition: width 0.3s ease, background-color 0.5s ease; 
+    }
+
+    #placeholder-text {
+      position: absolute;
+      z-index: 10;
+      font-size: 1.5rem;
+      color: #475569;
+      font-weight: 500;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    video { display: none; } 
+
+    canvas#output_canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0; 
+      transition: opacity 0.3s ease;
+      z-index: 5;
+    }
+
+    /* History & Chart Section */
+    .history-section {
+      width: 100%;
+      max-width: 800px;
+      background: var(--panel-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 40px;
+    }
+
+    .history-section h2 {
+      margin: 0 0 15px 0;
+      font-size: 1.4rem;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 250px;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .history-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .history-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 15px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 1.1rem;
+    }
+    
+    .history-list li:last-child {
+      border-bottom: none;
+    }
+
+    .history-list li .score-val {
+      font-weight: 600;
+      color: var(--text-color);
+    }
+    
+    .empty-history {
+      text-align: center;
+      color: #94A3B8;
+      padding: 20px;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>กายภาพบำบัด - บริหารมือ (กำ/แบ)</h1>
+    <p class="subtitle">กำมือให้แน่นแล้วแบออกให้สุด เพื่อบริหารกล้ามเนื้อมือและนิ้ว</p>
+    
+    <div class="stats-panel">
+      <div class="stats-container">
+        <div class="stat-box">จำนวนที่เหลือ<span id="reps-left">0</span></div>
+        <div class="stat-box">สถานะมือ<span id="hand-status">-</span></div>
+        <div class="stat-box">เวลา<span id="stopwatch">0.0s</span></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="input-group">
+        <label for="target-reps">เป้าหมาย (ครั้ง):</label>
+        <input type="number" id="target-reps" value="15" min="1" max="100">
+      </div>
+      <button id="start-btn" disabled>กำลังโหลด AI...</button>
+    </div>
+  </header>
+
+  <div id="game-container">
+    <div class="progress-bar-bg">
+      <div id="progress-fill" class="progress-bar-fill"></div>
+    </div>
+    
+    <div id="placeholder-text">กำลังโหลดโมเดล AI...</div>
+    <video id="webcam" autoplay playsinline></video>
+    <canvas id="output_canvas"></canvas>
+  </div>
+
+  <div class="history-section">
+    <h2>สถิติ 10 ครั้งล่าสุด (กราฟเวลาที่ใช้)</h2>
+    <div class="chart-container">
+      <canvas id="historyChart"></canvas>
+    </div>
+    <ul class="history-list" id="history-list">
+      <!-- History will be injected here -->
+    </ul>
+  </div>
+
+  <script type="module">
+    import vision from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm";
+    const { HandLandmarker, FilesetResolver } = vision;
+
+    const video = document.getElementById("webcam");
+    const canvasElement = document.getElementById("output_canvas");
+    const canvasCtx = canvasElement.getContext("2d");
+    const startBtn = document.getElementById("start-btn");
+    const placeholderText = document.getElementById("placeholder-text");
+    
+    // UI Elements
+    const repsLeftElement = document.getElementById("reps-left");
+    const handStatusElement = document.getElementById("hand-status");
+    const stopwatchElement = document.getElementById("stopwatch");
+    const targetRepsInput = document.getElementById("target-reps");
+    const progressFill = document.getElementById("progress-fill");
+    const historyListUI = document.getElementById("history-list");
+
+    let handLandmarker = undefined;
+    let lastVideoTime = -1;
+    let cameraActive = false;
+    
+    // Game/Therapy State
+    let targetReps = 15;
+    let repsLeft = 0;
+    let startTime = null;
+    let stopwatchInterval = null;
+    let isPlaying = false;
+    let timeElapsed = 0;
+    
+    // Rep counting logic
+    let handStage = "open"; // "open" (แบ) or "fist" (กำ)
+    let lastLandmarks = null;
+    let missingFrames = 0;
+    const MAX_MISSING_FRAMES = 5;
+
+    // Load Local Storage Data (Using a new key for Hand tracking)
+    let playHistory = JSON.parse(localStorage.getItem("ptHandTrackerHistory")) || [];
+    let chartInstance = null;
+    
+    // Init UI
+    renderHistory();
+    initChart();
+
+    // MediaPipe Hand Connections
+    const HAND_CONNECTIONS = [
+      [0,1], [1,2], [2,3], [3,4],       // Thumb
+      [0,5], [5,6], [6,7], [7,8],       // Index
+      [5,9], [9,10], [10,11], [11,12],  // Middle
+      [9,13], [13,14], [14,15], [15,16],// Ring
+      [13,17], [17,18], [18,19], [19,20],// Pinky
+      [0,17]                            // Palm base
+    ];
+
+    async function initializeAI() {
+      const fileset = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+      );
+      
+      handLandmarker = await HandLandmarker.createFromOptions(fileset, {
+        baseOptions: {
+          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numHands: 1
+      });
+
+      placeholderText.innerText = "รอการเปิดกล้อง...";
+      startBtn.innerText = "เริ่มทำกายภาพ";
+      startBtn.disabled = false;
+    }
+
+    initializeAI();
+
+    startBtn.addEventListener("click", () => {
+      if (!handLandmarker) return;
+
+      targetReps = parseInt(targetRepsInput.value) || 15;
+      repsLeft = targetReps;
+      
+      startBtn.disabled = true;
+      startBtn.innerText = "กำลังดำเนินการ...";
+      targetRepsInput.disabled = true;
+
+      // Reset Stats
+      repsLeftElement.innerText = repsLeft;
+      handStatusElement.innerText = "เตรียมตัว";
+      handStatusElement.style.color = "#8B5CF6";
+      stopwatchElement.innerText = "0.0s";
+      progressFill.style.width = "0%";
+      progressFill.style.backgroundColor = "var(--accent-color)"; 
+      handStage = "open"; // start assuming open hand
+      timeElapsed = 0;
+      isPlaying = true;
+
+      if (!cameraActive) {
+        placeholderText.innerText = "กำลังเชื่อมต่อกล้อง...";
+        navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+          video.srcObject = stream;
+          video.addEventListener("loadeddata", () => {
+            cameraActive = true;
+            canvasElement.width = video.videoWidth;
+            canvasElement.height = video.videoHeight;
+            
+            placeholderText.style.display = "none";
+            canvasElement.style.opacity = "1";
+            
+            startGameLoop();
+            predictWebcam();
+          });
+        }).catch(err => {
+          placeholderText.innerText = "ไม่สามารถเปิดกล้องได้";
+          startBtn.disabled = false;
+          startBtn.innerText = "ลองอีกครั้ง";
+          targetRepsInput.disabled = false;
+        });
+      } else {
+        startGameLoop();
+      }
+    });
+
+    function startGameLoop() {
+      startTime = Date.now();
+      
+      stopwatchInterval = setInterval(() => {
+        timeElapsed = (Date.now() - startTime) / 1000;
+        stopwatchElement.innerText = timeElapsed.toFixed(1) + "s";
+      }, 100);
+    }
+
+    function endGame() {
+      isPlaying = false;
+      clearInterval(stopwatchInterval);
+      
+      const finalTime = (Date.now() - startTime) / 1000;
+      
+      const now = new Date();
+      const timeString = `${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}`;
+      
+      playHistory.unshift({ 
+        reps: targetReps, 
+        time: parseFloat(finalTime.toFixed(1)), 
+        date: timeString 
+      });
+      
+      if (playHistory.length > 10) {
+        playHistory.pop(); 
+      }
+      
+      localStorage.setItem("ptHandTrackerHistory", JSON.stringify(playHistory));
+      renderHistory();
+      updateChart();
+
+      alert(`สำเร็จ! คุณทำครบ ${targetReps} ครั้ง ในเวลา ${finalTime.toFixed(1)} วินาที 🎉`);
+
+      // Reset UI
+      startBtn.disabled = false;
+      startBtn.innerText = "เริ่มทำใหม่";
+      targetRepsInput.disabled = false;
+      handStatusElement.innerText = "สำเร็จ!";
+      handStatusElement.style.color = "var(--success-color)";
+    }
+
+    function renderHistory() {
+      historyListUI.innerHTML = "";
+      if (playHistory.length === 0) {
+        historyListUI.innerHTML = "<li class='empty-history'>ยังไม่มีประวัติ</li>";
+        return;
+      }
+
+      playHistory.forEach((record, index) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span>${index + 1}. ${record.date} (${record.reps} ครั้ง)</span> <span class="score-val">${record.time} วิ</span>`;
+        historyListUI.appendChild(li);
+      });
+    }
+
+function initChart() {
+      const ctx = document.getElementById('historyChart').getContext('2d');
+      chartInstance = new Chart(ctx, {
+        type: 'line', // Changed from 'bar' to 'line'
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'เวลาที่ใช้ (วินาที)',
+            data: [],
+            backgroundColor: 'rgba(59, 130, 246, 0.2)', // Light blue fill under the line
+            borderColor: 'rgba(59, 130, 246, 1)',       // Solid blue line
+            borderWidth: 2,
+            pointBackgroundColor: '#FFFFFF',            // White dots
+            pointBorderColor: 'rgba(59, 130, 246, 1)',  // Blue border for dots
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            fill: true,   // Fills the area under the line
+            tension: 0.3  // Adds a smooth curve to the line
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'วินาที' } }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                title: function(context) { return playHistory[context[0].dataIndex]?.date || ''; },
+                afterLabel: function(context) { return `จำนวน: ${playHistory[context.dataIndex]?.reps} ครั้ง`; }
+              }
+            }
+          }
+        }
+      });
+      updateChart();
+    }
+
+    function updateChart() {
+      if(!chartInstance) return;
+      const chartData = [...playHistory].reverse(); // oldest to newest
+      
+      chartInstance.data.labels = chartData.map((_, i) => `ครั้งที่ ${chartData.length - i}`);
+      chartInstance.data.datasets[0].data = chartData.map(record => record.time);
+      chartInstance.update();
+    }
+
+    // Draw the skeleton, color changes based on open/fist state
+    function drawSkeleton(landmarks, isFist) {
+      canvasCtx.lineWidth = 5;
+      // Orange for Fist, Green for Open Hand
+      canvasCtx.strokeStyle = isFist ? "rgba(245, 158, 11, 0.9)" : "rgba(16, 185, 129, 0.9)";
+      canvasCtx.fillStyle = "#FFFFFF";
+
+      // Draw Lines
+      for (const [startIdx, endIdx] of HAND_CONNECTIONS) {
+        const p1 = landmarks[startIdx];
+        const p2 = landmarks[endIdx];
+        canvasCtx.beginPath();
+        canvasCtx.moveTo((1 - p1.x) * canvasElement.width, p1.y * canvasElement.height);
+        canvasCtx.lineTo((1 - p2.x) * canvasElement.width, p2.y * canvasElement.height);
+        canvasCtx.stroke();
+      }
+
+      // Draw Joints
+      for (const p of landmarks) {
+        canvasCtx.beginPath();
+        canvasCtx.arc((1 - p.x) * canvasElement.width, p.y * canvasElement.height, 6, 0, 2 * Math.PI);
+        canvasCtx.fill();
+      }
+    }
+
+    // Helper to check if hand is open or closed
+    function checkFingersExtended(landmarks) {
+      let extendedCount = 0;
+      // Index, Middle, Ring, Pinky (Comparing Tip vs PIP joint distance to wrist)
+      const fingers = [ [8,6], [12,10], [16,14], [20,18] ];
+      
+      for (const [tipIdx, pipIdx] of fingers) {
+        const tipDist = Math.hypot(landmarks[tipIdx].x - landmarks[0].x, landmarks[tipIdx].y - landmarks[0].y);
+        const pipDist = Math.hypot(landmarks[pipIdx].x - landmarks[0].x, landmarks[pipIdx].y - landmarks[0].y);
+        
+        // If the fingertip is further from the wrist than the middle joint, the finger is extended
+        if (tipDist > pipDist) {
+          extendedCount++;
+        }
+      }
+      return extendedCount;
+    }
+
+    async function predictWebcam() {
+      if (!cameraActive) return;
+      
+      let startTimeMs = performance.now();
+      let results = undefined;
+      
+      if (video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        results = handLandmarker.detectForVideo(video, startTimeMs);
+      }
+
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+      // Draw mirror video
+      canvasCtx.translate(canvasElement.width, 0);
+      canvasCtx.scale(-1, 1);
+      canvasCtx.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.restore();
+
+      if (!isPlaying) {
+        canvasCtx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+      }
+
+      // Smooth tracking to prevent blips when fist is tightly closed
+      let currentLandmarks = null;
+      if (results && results.landmarks && results.landmarks.length > 0) {
+        currentLandmarks = results.landmarks[0];
+        lastLandmarks = currentLandmarks;
+        missingFrames = 0;
+      } else {
+        if (lastLandmarks && missingFrames < MAX_MISSING_FRAMES) {
+          currentLandmarks = lastLandmarks;
+          missingFrames++;
+        } else {
+          lastLandmarks = null;
+        }
+      }
+
+      if (currentLandmarks) {
+        const extendedFingers = checkFingersExtended(currentLandmarks);
+        // Hand is considered a fist if 1 or 0 fingers are extended. Open if 3 or 4.
+        const isFist = extendedFingers <= 1; 
+
+        drawSkeleton(currentLandmarks, isFist);
+
+        if (isPlaying) {
+          if (extendedFingers >= 3) {
+            // Hand is OPEN
+            if (handStage === "fist") {
+              // Complete 1 Rep (Close -> Open)
+              handStage = "open";
+              repsLeft--;
+              repsLeftElement.innerText = repsLeft;
+              
+              // Update Progress Bar
+              const pct = ((targetReps - repsLeft) / targetReps) * 100;
+              progressFill.style.width = pct + "%";
+              if(pct > 50) progressFill.style.backgroundColor = "var(--success-color)";
+              
+              if (repsLeft <= 0) {
+                endGame();
+              }
+            } else {
+              handStatusElement.innerText = `แบมือแล้ว (กำมือต่อ)`;
+              handStatusElement.style.color = "var(--success-color)"; // Green
+            }
+          } else if (extendedFingers <= 1) {
+            // Hand is FIST
+            if (handStage === "open") {
+              handStage = "fist";
+            }
+            handStatusElement.innerText = `กำมือแน่นแล้ว (แบมือออก)`;
+            handStatusElement.style.color = "var(--warning-color)"; // Orange
+          } else {
+            handStatusElement.innerText = "กำลังเคลื่อนไหว...";
+            handStatusElement.style.color = "#64748B";
+          }
+        }
+      } else {
+        if(isPlaying) {
+          handStatusElement.innerText = "ไม่พบมือ";
+          handStatusElement.style.color = "#EF4444";
+        }
+      }
+
+      window.requestAnimationFrame(predictWebcam);
+    }
+  </script>
+</body>
+</html>

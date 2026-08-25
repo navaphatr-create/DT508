@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Posture Tracker - ตรวจจับท่านั่ง</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #F8FAFC;
+      --text-color: #334155;
+      --accent-color: #3B82F6;
+      --success-color: #10B981;
+      --warning-color: #F59E0B;
+      --danger-color: #EF4444;
+      --panel-bg: #FFFFFF;
+      --border-color: #E2E8F0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Kanit', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      width: 100%;
+      max-width: 800px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 5px 0;
+      font-weight: 600;
+      font-size: 2rem;
+    }
+    
+    p.subtitle {
+      margin: 0 0 15px 0;
+      color: #64748B;
+    }
+
+    /* Stats Panel */
+    .stats-panel {
+      background: var(--panel-bg);
+      padding: 15px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+    }
+
+    .stats-container {
+      display: flex;
+      justify-content: space-around;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .stat-box {
+      font-size: 1.1rem;
+      font-weight: 500;
+      text-align: center;
+      flex: 1;
+    }
+
+    .stat-box span {
+      font-weight: 600;
+      font-size: 1.6rem;
+      display: block;
+      transition: color 0.3s ease;
+    }
+
+    #score { color: var(--success-color); }
+    #status-text { color: var(--success-color); font-size: 1.4rem; }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      height: 50px; 
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    button {
+      font-family: 'Kanit', sans-serif;
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 0 30px;
+      font-size: 1.1rem;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+      transition: all 0.2s;
+      height: 100%;
+      min-width: 160px;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #2563EB;
+      transform: translateY(-2px);
+    }
+
+    button:disabled {
+      background-color: #94A3B8;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background-color: var(--panel-bg);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    
+    .btn-secondary:hover:not(:disabled) {
+      background-color: var(--bg-color);
+      transform: translateY(-2px);
+    }
+
+    /* Game / Camera Container */
+    #game-container {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 4/3;
+      background: #CBD5E1; 
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    /* Dynamic Posture Bar */
+    .progress-bar-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 16px;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 20;
+    }
+
+    .progress-bar-fill {
+      width: 100%;
+      height: 100%;
+      background-color: hsl(120, 80%, 50%); /* Starts Green */
+      transition: width 0.3s ease, background-color 0.5s ease; 
+      border-radius: 0 8px 8px 0;
+    }
+
+    #placeholder-text {
+      position: absolute;
+      z-index: 10;
+      font-size: 1.5rem;
+      color: #475569;
+      font-weight: 500;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    video { display: none; } 
+
+    canvas#output_canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0; 
+      transition: opacity 0.3s ease;
+      z-index: 5;
+    }
+
+    /* Instructions Panel */
+    .info-section {
+      width: 100%;
+      max-width: 800px;
+      background: var(--panel-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .info-section h3 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+    .info-section ul {
+      padding-left: 20px;
+      color: #475569;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Posture Tracker</h1>
+    <p class="subtitle">ระบบ AI ตรวจจับท่านั่ง เพื่อป้องกันออฟฟิศซินโดรม</p>
+    
+    <div class="stats-panel">
+      <div class="stats-container">
+        <div class="stat-box">คะแนนท่าทาง<span id="score">100%</span></div>
+        <div class="stat-box">สถานะ<span id="status-text">ยอดเยี่ยม</span></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="start-btn" disabled>โหลด AI...</button>
+      <button id="calibrate-btn" class="btn-secondary" disabled>🎯 ตั้งค่าท่ามาตรฐาน</button>
+    </div>
+  </header>
+
+  <div id="game-container">
+    <div class="progress-bar-bg">
+      <div id="progress-fill" class="progress-bar-fill"></div>
+    </div>
+    
+    <div id="placeholder-text">กำลังโหลดโมเดล AI...</div>
+    <video id="webcam" autoplay playsinline></video>
+    <canvas id="output_canvas"></canvas>
+  </div>
+
+  <div class="info-section">
+    <h3>คำแนะนำการใช้งาน</h3>
+    <ul>
+      <li>วางกล้องให้อยู่ในระดับสายตา และเห็นช่วงไหล่ของคุณชัดเจน</li>
+      <li>เมื่อพร้อม ให้ <b>นั่งหลังตรง</b> และกดปุ่ม <b>"ตั้งค่าท่ามาตรฐาน"</b> เพื่อให้ AI จดจำสรีระของคุณ</li>
+      <li>หากแถบสีเปลี่ยนเป็น <span style="color:var(--warning-color); font-weight:bold;">สีเหลือง</span> หรือ <span style="color:var(--danger-color); font-weight:bold;">สีแดง</span> แสดงว่าคุณกำลังนั่งหลังค่อมหรือยื่นหน้าเข้าจอมากเกินไป</li>
+    </ul>
+  </div>
+
+  <script type="module">
+    import vision from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm";
+    const { PoseLandmarker, FilesetResolver } = vision;
+
+    const video = document.getElementById("webcam");
+    const canvasElement = document.getElementById("output_canvas");
+    const canvasCtx = canvasElement.getContext("2d");
+    const startBtn = document.getElementById("start-btn");
+    const calibrateBtn = document.getElementById("calibrate-btn");
+    const placeholderText = document.getElementById("placeholder-text");
+    
+    // UI Elements
+    const scoreElement = document.getElementById("score");
+    const statusTextElement = document.getElementById("status-text");
+    const progressFill = document.getElementById("progress-fill");
+
+    let poseLandmarker = undefined;
+    let lastVideoTime = -1;
+    let cameraActive = false;
+    let isTracking = false;
+
+    // Posture Math Variables
+    // The ratio is: (Distance from Neck to Nose) / (Shoulder Width)
+    // When slouching forward, the nose drops relative to the shoulders, lowering the ratio.
+    let baselineRatio = 0.8; // Default fallback ratio
+    
+    // Anti-blip state
+    let lastLandmarks = null;
+    let missingFrames = 0;
+    const MAX_MISSING_FRAMES = 5;
+
+    // We only care about upper body for desk posture
+    const UPPER_BODY_CONNECTIONS = [
+      [11, 12], // Shoulders
+      [11, 23], [12, 24], // Shoulders to Hips (if visible)
+      [0, 1], [1, 2], [2, 3], [3, 7], // Right Eye to Ear
+      [0, 4], [4, 5], [5, 6], [6, 8]  // Left Eye to Ear
+    ];
+
+    async function initializeAI() {
+      const fileset = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+      );
+      
+      poseLandmarker = await PoseLandmarker.createFromOptions(fileset, {
+        baseOptions: {
+          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`,
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numPoses: 1
+      });
+
+      placeholderText.innerText = "รอการเปิดกล้อง...";
+      startBtn.innerText = "เปิดกล้องเพื่อใช้งาน";
+      startBtn.disabled = false;
+    }
+
+    initializeAI();
+
+    startBtn.addEventListener("click", () => {
+      if (!poseLandmarker) return;
+
+      startBtn.disabled = true;
+      startBtn.innerText = "กำลังเชื่อมต่อกล้อง...";
+
+      if (!cameraActive) {
+        navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+          video.srcObject = stream;
+          video.addEventListener("loadeddata", () => {
+            cameraActive = true;
+            isTracking = true;
+            canvasElement.width = video.videoWidth;
+            canvasElement.height = video.videoHeight;
+            
+            placeholderText.style.display = "none";
+            canvasElement.style.opacity = "1";
+            
+            startBtn.style.display = 'none'; // Hide start button
+            calibrateBtn.disabled = false;   // Enable calibration
+            
+            predictWebcam();
+          });
+        }).catch(err => {
+          placeholderText.innerText = "ไม่สามารถเปิดกล้องได้";
+          startBtn.disabled = false;
+          startBtn.innerText = "ลองอีกครั้ง";
+        });
+      }
+    });
+
+    calibrateBtn.addEventListener("click", () => {
+      if (lastLandmarks) {
+        const ratio = calculatePostureRatio(lastLandmarks);
+        if (ratio > 0) {
+          baselineRatio = ratio;
+          
+          // Flash the screen green to indicate success
+          canvasCtx.fillStyle = "rgba(16, 185, 129, 0.4)";
+          canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+          
+          calibrateBtn.innerText = "✅ บันทึกท่ามาตรฐานแล้ว";
+          setTimeout(() => {
+            calibrateBtn.innerText = "🎯 ตั้งค่าท่ามาตรฐานใหม่";
+          }, 2000);
+        }
+      }
+    });
+
+    function calculatePostureRatio(landmarks) {
+      const nose = landmarks[0];
+      const leftShoulder = landmarks[11];
+      const rightShoulder = landmarks[12];
+
+      // Ensure key points are visible
+      if (nose.visibility < 0.5 || leftShoulder.visibility < 0.5 || rightShoulder.visibility < 0.5) {
+        return -1; // Invalid
+      }
+
+      // Convert to pixel coordinates for accurate aspect ratio calculation
+      const nX = nose.x * canvasElement.width, nY = nose.y * canvasElement.height;
+      const lsX = leftShoulder.x * canvasElement.width, lsY = leftShoulder.y * canvasElement.height;
+      const rsX = rightShoulder.x * canvasElement.width, rsY = rightShoulder.y * canvasElement.height;
+
+      // Distance between shoulders
+      const shoulderWidth = Math.hypot(rsX - lsX, rsY - lsY);
+      
+      // Midpoint of shoulders
+      const midShoulderX = (lsX + rsX) / 2;
+      const midShoulderY = (lsY + rsY) / 2;
+
+      // Distance from mid-shoulder to nose (Neck Length essentially)
+      const neckLength = Math.hypot(nX - midShoulderX, nY - midShoulderY);
+
+      if (shoulderWidth === 0) return -1;
+      return neckLength / shoulderWidth;
+    }
+
+    function drawSkeleton(landmarks) {
+      canvasCtx.lineWidth = 3;
+      canvasCtx.strokeStyle = "rgba(255, 255, 255, 0.6)"; 
+      canvasCtx.fillStyle = "var(--accent-color)"; 
+
+      // Draw Connections
+      for (const [startIdx, endIdx] of UPPER_BODY_CONNECTIONS) {
+        const p1 = landmarks[startIdx];
+        const p2 = landmarks[endIdx];
+        
+        if (p1.visibility > 0.5 && p2.visibility > 0.5) {
+          const x1 = (1 - p1.x) * canvasElement.width;
+          const y1 = p1.y * canvasElement.height;
+          const x2 = (1 - p2.x) * canvasElement.width;
+          const y2 = p2.y * canvasElement.height;
+
+          canvasCtx.beginPath();
+          canvasCtx.moveTo(x1, y1);
+          canvasCtx.lineTo(x2, y2);
+          canvasCtx.stroke();
+        }
+      }
+
+      // Draw Key Joints (Nose, Ears, Shoulders)
+      const keyJoints = [0, 7, 8, 11, 12];
+      for (const idx of keyJoints) {
+        const p = landmarks[idx];
+        if (p.visibility > 0.5) {
+          const x = (1 - p.x) * canvasElement.width;
+          const y = p.y * canvasElement.height;
+          canvasCtx.beginPath();
+          canvasCtx.arc(x, y, 5, 0, 2 * Math.PI);
+          canvasCtx.fill();
+        }
+      }
+    }
+
+    async function predictWebcam() {
+      if (!cameraActive) return;
+      
+      let startTimeMs = performance.now();
+      let results = undefined;
+      
+      if (video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        results = poseLandmarker.detectForVideo(video, startTimeMs);
+      }
+
+      // Draw mirrored video
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.translate(canvasElement.width, 0);
+      canvasCtx.scale(-1, 1);
+      canvasCtx.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.restore();
+
+      // Anti-blip Frame Smoothing
+      let currentLandmarks = null;
+      if (results && results.landmarks && results.landmarks.length > 0) {
+        currentLandmarks = results.landmarks[0];
+        lastLandmarks = currentLandmarks;
+        missingFrames = 0;
+      } else {
+        if (lastLandmarks && missingFrames < MAX_MISSING_FRAMES) {
+          currentLandmarks = lastLandmarks;
+          missingFrames++;
+        } else {
+          lastLandmarks = null;
+        }
+      }
+
+      if (currentLandmarks && isTracking) {
+        drawSkeleton(currentLandmarks);
+
+        const currentRatio = calculatePostureRatio(currentLandmarks);
+        
+        if (currentRatio > 0) {
+          // Calculate Score (Percentage against baseline)
+          // If current is equal or greater than baseline = 100%
+          let score = (currentRatio / baselineRatio) * 100;
+          
+          // Clamp score between 0 and 100
+          score = Math.min(Math.max(score, 0), 100);
+
+          // Update UI
+          scoreElement.innerText = Math.round(score) + "%";
+          progressFill.style.width = score + "%";
+
+          // Calculate Dynamic HSL Color (120 = Green, 60 = Yellow, 0 = Red)
+          // We multiply score by 1.2 so 100% maps to 120 hue
+          const dynamicHue = score * 1.2;
+          const dynamicColor = `hsl(${dynamicHue}, 80%, 45%)`;
+          
+          progressFill.style.backgroundColor = dynamicColor;
+          scoreElement.style.color = dynamicColor;
+          statusTextElement.style.color = dynamicColor;
+
+          // Update Status Text based on thresholds
+          if (score >= 85) {
+            statusTextElement.innerText = "ยอดเยี่ยม";
+          } else if (score >= 60) {
+            statusTextElement.innerText = "เริ่มหลังค่อม";
+          } else {
+            statusTextElement.innerText = "อันตราย ปรับท่าด่วน!";
+          }
+        }
+      } else {
+        // Body not found
+        scoreElement.innerText = "--";
+        statusTextElement.innerText = "ไม่พบร่างกาย";
+        statusTextElement.style.color = "#94A3B8";
+        scoreElement.style.color = "#94A3B8";
+        progressFill.style.width = "0%";
+      }
+
+      window.requestAnimationFrame(predictWebcam);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face Counter AI - ระบบนับจำนวนใบหน้า</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #F8FAFC;
+      --text-color: #334155;
+      --accent-color: #3B82F6;
+      --success-color: #10B981;
+      --panel-bg: #FFFFFF;
+      --border-color: #E2E8F0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Kanit', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      width: 100%;
+      max-width: 800px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 5px 0;
+      font-weight: 600;
+      font-size: 2rem;
+    }
+    
+    p.subtitle {
+      margin: 0 0 15px 0;
+      color: #64748B;
+    }
+
+    .stats-panel {
+      background: var(--panel-bg);
+      padding: 15px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .stat-box {
+      font-size: 1.1rem;
+      font-weight: 500;
+      text-align: center;
+    }
+
+    .stat-box span {
+      font-weight: 600;
+      font-size: 2rem;
+      display: block;
+      color: var(--accent-color);
+    }
+
+    .mode-switcher {
+      display: flex;
+      background: var(--panel-bg);
+      border-radius: 50px;
+      padding: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .mode-btn {
+      flex: 1;
+      font-family: 'Kanit', sans-serif;
+      background: transparent;
+      color: #64748B;
+      border: none;
+      padding: 10px 30px;
+      font-size: 1.1rem;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      min-width: 150px;
+      box-shadow: none;
+    }
+
+    .mode-btn.active {
+      background: var(--accent-color);
+      color: white;
+      box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      height: 50px; 
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    .action-btn {
+      font-family: 'Kanit', sans-serif;
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 0 40px;
+      font-size: 1.2rem;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+      transition: all 0.2s;
+      height: 100%;
+      min-width: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .action-btn:hover:not(:disabled) {
+      background-color: #2563EB;
+      transform: translateY(-2px);
+    }
+
+    .action-btn:disabled {
+      background-color: #94A3B8;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+    
+    .upload-label {
+      display: none; 
+    }
+
+    #game-container {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 16/9; 
+      background: #CBD5E1; 
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+      min-height: 350px;
+    }
+
+    #placeholder-text {
+      position: absolute;
+      z-index: 10;
+      font-size: 1.5rem;
+      color: #475569;
+      font-weight: 500;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    video { display: none; } 
+
+    canvas#output_canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain; 
+      opacity: 0; 
+      transition: opacity 0.3s ease;
+      z-index: 5;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Face Counter AI</h1>
+    <p class="subtitle">นับจำนวนใบหน้าแบบกลุ่ม (Group Photo Edition)</p>
+  </header>
+
+  <div class="mode-switcher">
+    <button id="mode-cam" class="mode-btn active">📷 โหมดกล้อง</button>
+    <button id="mode-img" class="mode-btn">🖼️ โหมดรูปภาพ</button>
+  </div>
+
+  <div class="stats-panel">
+    <div class="stat-box">จำนวนใบหน้าที่พบ<span id="face-count">0</span></div>
+  </div>
+
+  <div class="controls">
+    <button id="start-cam-btn" class="action-btn" disabled>กำลังโหลด AI...</button>
+    <label id="upload-label" class="action-btn upload-label" style="display: none;">
+      <input type="file" id="image-upload" accept="image/png, image/jpeg, image/webp">
+      อัปโหลดรูปภาพ...
+    </label>
+  </div>
+
+  <div id="game-container">
+    <div id="placeholder-text">รอการเปิดกล้อง...</div>
+    <video id="webcam" autoplay playsinline></video>
+    <canvas id="output_canvas"></canvas>
+  </div>
+
+  <script type="module">
+    import vision from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm";
+    const { FaceLandmarker, FilesetResolver } = vision;
+
+    const video = document.getElementById("webcam");
+    const canvasElement = document.getElementById("output_canvas");
+    const canvasCtx = canvasElement.getContext("2d");
+    
+    const startCamBtn = document.getElementById("start-cam-btn");
+    const uploadLabel = document.getElementById("upload-label");
+    const imageUpload = document.getElementById("image-upload");
+    
+    const modeCamBtn = document.getElementById("mode-cam");
+    const modeImgBtn = document.getElementById("mode-img");
+    
+    const placeholderText = document.getElementById("placeholder-text");
+    const faceCountElement = document.getElementById("face-count");
+
+    let faceLandmarker = undefined;
+    let currentMode = 'camera'; 
+    let currentRunningMode = 'VIDEO';
+    let cameraActive = false;
+    let stream = null;
+    let lastVideoTime = -1;
+    let isPredictingVideo = false;
+
+    async function initializeAI() {
+      const fileset = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+      );
+      
+      faceLandmarker = await FaceLandmarker.createFromOptions(fileset, {
+        baseOptions: {
+          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
+          delegate: "GPU"
+        },
+        runningMode: currentRunningMode,
+        numFaces: 20, 
+        minFaceDetectionConfidence: 0.4
+      });
+
+      startCamBtn.innerText = "เปิดกล้อง";
+      startCamBtn.disabled = false;
+      uploadLabel.style.pointerEvents = "auto";
+      uploadLabel.style.backgroundColor = "var(--accent-color)";
+    }
+
+    initializeAI();
+
+    async function setRunningMode(mode) {
+      if (currentRunningMode === mode) return;
+      await faceLandmarker.setOptions({ runningMode: mode });
+      currentRunningMode = mode;
+    }
+
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+      cameraActive = false;
+      isPredictingVideo = false;
+      video.pause();
+    }
+
+    function resetDisplay() {
+      canvasElement.style.opacity = "0";
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      faceCountElement.innerText = "0";
+    }
+
+    // --- Mode Switches ---
+    modeCamBtn.addEventListener("click", () => {
+      if (currentMode === 'camera') return;
+      currentMode = 'camera';
+      
+      modeCamBtn.classList.add("active");
+      modeImgBtn.classList.remove("active");
+      startCamBtn.style.display = "flex";
+      uploadLabel.style.display = "none";
+      placeholderText.innerText = "รอการเปิดกล้อง...";
+      placeholderText.style.display = "block";
+      
+      resetDisplay();
+      startCamBtn.innerText = "เปิดกล้อง";
+      startCamBtn.disabled = false;
+    });
+
+    modeImgBtn.addEventListener("click", async () => {
+      if (currentMode === 'image') return;
+      currentMode = 'image';
+      
+      modeImgBtn.classList.add("active");
+      modeCamBtn.classList.remove("active");
+      startCamBtn.style.display = "none";
+      uploadLabel.style.display = "flex";
+      placeholderText.innerText = "อัปโหลดรูปภาพเพื่อเริ่มต้น...";
+      placeholderText.style.display = "block";
+      
+      stopCamera();
+      resetDisplay();
+      await setRunningMode("IMAGE");
+    });
+
+    // --- Camera Logic ---
+    startCamBtn.addEventListener("click", async () => {
+      if (!faceLandmarker) return;
+
+      startCamBtn.disabled = true;
+      startCamBtn.innerText = "กำลังเชื่อมต่อกล้อง...";
+
+      await setRunningMode("VIDEO");
+
+      if (!cameraActive) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          video.srcObject = stream;
+          video.addEventListener("loadeddata", () => {
+            cameraActive = true;
+            canvasElement.width = video.videoWidth;
+            canvasElement.height = video.videoHeight;
+            
+            placeholderText.style.display = "none";
+            canvasElement.style.opacity = "1";
+            startCamBtn.style.display = 'none'; 
+            
+            isPredictingVideo = true;
+            predictWebcam();
+          }, { once: true });
+        } catch (err) {
+          placeholderText.innerText = "ไม่สามารถเปิดกล้องได้";
+          startCamBtn.disabled = false;
+          startCamBtn.innerText = "ลองอีกครั้ง";
+        }
+      }
+    });
+
+    async function predictWebcam() {
+      if (!cameraActive || !isPredictingVideo || currentMode !== 'camera') return;
+      
+      let startTimeMs = performance.now();
+      let results = undefined;
+      
+      if (video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        results = faceLandmarker.detectForVideo(video, startTimeMs);
+      }
+
+      const boxes = getBoundingBoxesFromLandmarks(results?.faceLandmarks, canvasElement.width, canvasElement.height);
+      renderDetections(video, boxes, true);
+      
+      window.requestAnimationFrame(predictWebcam);
+    }
+
+    // --- Image Upload Logic (Fixed for High-Res Images) ---
+    imageUpload.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      placeholderText.innerText = "กำลังประมวลผล...";
+      placeholderText.style.display = "block";
+      canvasElement.style.opacity = "0";
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            // FIX: Prevent high-res images from crashing WebGL/GPU
+            // Downscale logic limits processing size to max 1280px on the longest side
+            let targetW = img.naturalWidth;
+            let targetH = img.naturalHeight;
+            const MAX_SIZE = 1280; 
+
+            if (targetW > MAX_SIZE || targetH > MAX_SIZE) {
+              const ratio = Math.min(MAX_SIZE / targetW, MAX_SIZE / targetH);
+              targetW = Math.floor(targetW * ratio);
+              targetH = Math.floor(targetH * ratio);
+            }
+
+            // Sync canvas resolution to the safe target size
+            canvasElement.width = targetW;
+            canvasElement.height = targetH;
+            
+            // Draw image to canvas to ensure MediaPipe can read the pixels reliably
+            canvasCtx.drawImage(img, 0, 0, targetW, targetH);
+            
+            // Detect using the safely scaled canvas
+            const results = faceLandmarker.detect(canvasElement);
+            const boxes = getBoundingBoxesFromLandmarks(results.faceLandmarks, targetW, targetH);
+            
+            placeholderText.style.display = "none";
+            canvasElement.style.opacity = "1";
+            
+            // Render the detections (img is automatically scaled by drawImage to fit targetW/H)
+            renderDetections(img, boxes, false);
+          } catch (err) {
+            console.error(err);
+            placeholderText.innerText = "เกิดข้อผิดพลาดในการประมวลผล";
+            placeholderText.style.display = "block";
+          }
+          
+          // Reset file input
+          imageUpload.value = "";
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // --- Helper: Convert Landmarks to Bounding Boxes ---
+    function getBoundingBoxesFromLandmarks(faceLandmarksArray, width, height) {
+      if (!faceLandmarksArray) return [];
+      
+      return faceLandmarksArray.map(landmarks => {
+        let minX = Infinity, minY = Infinity;
+        let maxX = -Infinity, maxY = -Infinity;
+        
+        landmarks.forEach(p => {
+          if (p.x < minX) minX = p.x;
+          if (p.x > maxX) maxX = p.x;
+          if (p.y < minY) minY = p.y;
+          if (p.y > maxY) maxY = p.y;
+        });
+
+        // Add visual padding to encapsulate the whole head, not just the face mesh
+        const padX = (maxX - minX) * 0.1;
+        const padY = (maxY - minY) * 0.2;
+        
+        return {
+          x: (minX - padX) * width,
+          y: (minY - padY * 1.5) * height,
+          w: ((maxX - minX) + (padX * 2)) * width,
+          h: ((maxY - minY) + (padY * 2.5)) * height
+        };
+      });
+    }
+
+    // --- Rendering ---
+    function renderDetections(source, boxes, isMirrored) {
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+      if (isMirrored) {
+        canvasCtx.translate(canvasElement.width, 0);
+        canvasCtx.scale(-1, 1);
+      }
+      
+      // source is drawn to fit the current internal canvas resolution
+      canvasCtx.drawImage(source, 0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.restore();
+
+      faceCountElement.innerText = boxes.length;
+
+      boxes.forEach((box, index) => {
+        let { x, y, w, h } = box;
+
+        if (isMirrored) {
+          x = canvasElement.width - x - w;
+        }
+
+        canvasCtx.strokeStyle = "rgba(59, 130, 246, 0.9)"; 
+        canvasCtx.lineWidth = Math.max(3, canvasElement.width * 0.005);
+        canvasCtx.strokeRect(x, y, w, h);
+        
+        canvasCtx.fillStyle = "rgba(59, 130, 246, 1)";
+        const cornerSize = Math.max(8, canvasElement.width * 0.015);
+        canvasCtx.fillRect(x - 2, y - 2, cornerSize, cornerSize); 
+        canvasCtx.fillRect(x + w - cornerSize + 2, y - 2, cornerSize, cornerSize); 
+        canvasCtx.fillRect(x - 2, y + h - cornerSize + 2, cornerSize, cornerSize); 
+        canvasCtx.fillRect(x + w - cornerSize + 2, y + h - cornerSize + 2, cornerSize, cornerSize); 
+        
+        const labelHeight = Math.max(25, canvasElement.height * 0.04);
+        canvasCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        canvasCtx.fillRect(x, y - labelHeight, w, labelHeight);
+        
+        canvasCtx.fillStyle = "#FFFFFF";
+        canvasCtx.font = `500 ${Math.max(16, canvasElement.height * 0.025)}px Kanit`;
+        canvasCtx.textBaseline = "middle";
+        canvasCtx.fillText(`Face ${index + 1}`, x + 5, y - (labelHeight / 2));
+      });
+    }
+  </script>
+</body>
+</html>

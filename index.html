@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Vision Portal - หน้าหลัก</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #F8FAFC;
+      --text-color: #334155;
+      --accent-color: #3B82F6;
+      --panel-bg: #FFFFFF;
+      --border-color: #E2E8F0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 40px 20px;
+      font-family: 'Kanit', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      width: 100%;
+      max-width: 900px;
+      margin-bottom: 40px;
+    }
+
+    h1 {
+      margin: 0 0 10px 0;
+      font-weight: 600;
+      font-size: 2.5rem;
+      color: var(--text-color);
+    }
+    
+    p.subtitle {
+      margin: 0;
+      color: #64748B;
+      font-size: 1.2rem;
+      font-weight: 300;
+    }
+
+    .section-title {
+      width: 100%;
+      max-width: 900px;
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin: 0 0 20px 0;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--border-color);
+      color: var(--text-color);
+    }
+
+    /* Grid Layout for Cards */
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 900px;
+      margin-bottom: 50px;
+    }
+
+    /* Individual Card Styles */
+    .card {
+      background: var(--panel-bg);
+      border-radius: 16px;
+      padding: 30px 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border-color);
+      text-decoration: none;
+      color: var(--text-color);
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 12px 25px -5px rgba(59, 130, 246, 0.15);
+      border-color: var(--accent-color);
+    }
+
+    .card-icon {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      transition: transform 0.3s ease;
+    }
+
+    .card:hover .card-icon {
+      transform: scale(1.1);
+    }
+
+    .card-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin: 0 0 10px 0;
+      color: var(--text-color);
+      transition: color 0.2s ease;
+    }
+
+    .card:hover .card-title {
+      color: var(--accent-color);
+    }
+
+    .card-desc {
+      font-size: 0.95rem;
+      color: #64748B;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    /* Tag styling for the project number */
+    .card-tag {
+      background: var(--bg-color);
+      color: #64748B;
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: 50px;
+      margin-bottom: 15px;
+      border: 1px solid var(--border-color);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>AI Vision Portal</h1>
+    <p class="subtitle">ศูนย์รวมผลงานระบบตรวจจับและวิเคราะห์ด้วย AI (MediaPipe)</p>
+  </header>
+
+  <!-- Assignments Section -->
+  <h2 class="section-title">งานที่ได้รับมอบหมาย (Assignments)</h2>
+  <div class="grid-container">
+    
+    <a href="assignment 1.html" class="card">
+      <span class="card-tag">Assignment 1</span>
+      <div class="card-icon">👁️</div>
+      <h3 class="card-title">Face Inspector</h3>
+      <p class="card-desc">ระบบวิเคราะห์ใบหน้าจากวิดีโอ (Mesh, Contours, Landmarks).</p>
+    </a>
+
+    <a href="assignment 3.html" class="card">
+      <span class="card-tag">Assignment 3</span>
+      <div class="card-icon">🎭</div>
+      <h3 class="card-title">Face Props AR</h3>
+      <p class="card-desc">อัปโหลดรูปภาพและแปะติดบนจุดต่างๆ ของใบหน้าแบบเรียลไทม์.</p>
+    </a>
+
+    <a href="assignment 4.html" class="card">
+      <span class="card-tag">Assignment 4</span>
+      <div class="card-icon">🧘</div>
+      <h3 class="card-title">Posture Tracker</h3>
+      <p class="card-desc">ระบบตรวจจับและให้คะแนนท่านั่ง (ออฟฟิศซินโดรม).</p>
+    </a>
+
+    <a href="assignment 5.html" class="card">
+      <span class="card-tag">Assignment 5</span>
+      <div class="card-icon">🎯</div>
+      <h3 class="card-title">Circle Touch Game</h3>
+      <p class="card-desc">มินิเกมใช้นิ้วชี้แตะวงกลมให้ทันเวลา พร้อมระบบบันทึกสถิติ.</p>
+    </a>
+
+    <a href="assignment 6.html" class="card">
+      <span class="card-tag">Assignment 6</span>
+      <div class="card-icon">💪</div>
+      <h3 class="card-title">Physical Therapy</h3>
+      <p class="card-desc">ระบบช่วยทำกายภาพบำบัด ตรวจจับการเคลื่อนไหวพร้อมกราฟสถิติ.</p>
+    </a>
+
+  </div>
+
+  <!-- Workshops Section -->
+  <h2 class="section-title">เวิร์กชอป (Workshops)</h2>
+  <div class="grid-container">
+    
+    <a href="workshop 2.html" class="card">
+      <span class="card-tag">Workshop 2</span>
+      <div class="card-icon">👥</div>
+      <h3 class="card-title">Face Counter</h3>
+      <p class="card-desc">ระบบนับจำนวนใบหน้าแบบกลุ่ม รองรับทั้งกล้องและการอัปโหลดรูป.</p>
+    </a>
+
+    <a href="workshop 3.html" class="card">
+      <span class="card-tag">Workshop 3</span>
+      <div class="card-icon">🖐️</div>
+      <h3 class="card-title">Multi-Hand Tracker</h3>
+      <p class="card-desc">ระบบวิเคราะห์มือหลายคนแบบเรียลไทม์ (สูงสุด 6 เป้าหมาย).</p>
+    </a>
+
+    <a href="workshop 4.html" class="card">
+      <span class="card-tag">Workshop 4</span>
+      <div class="card-icon">🔍</div>
+      <h3 class="card-title">Face Detection</h3>
+      <p class="card-desc">ระบบตรวจจับใบหน้าจากวิดีโอและรูปภาพ (Face Detection).</p>
+    </a>
+
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face Inspector AI - วิเคราะห์ใบหน้า</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #F8FAFC;
+      --text-color: #334155;
+      --accent-color: #3B82F6;
+      --success-color: #10B981;
+      --panel-bg: #FFFFFF;
+      --border-color: #E2E8F0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Kanit', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      width: 100%;
+      max-width: 800px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 5px 0;
+      font-weight: 600;
+      font-size: 2rem;
+    }
+    
+    p.subtitle {
+      margin: 0 0 15px 0;
+      color: #64748B;
+    }
+
+    .stats-panel {
+      background: var(--panel-bg);
+      padding: 15px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .stat-box {
+      font-size: 1.1rem;
+      font-weight: 500;
+      text-align: center;
+    }
+
+    .stat-box span {
+      font-weight: 600;
+      font-size: 2rem;
+      display: block;
+      color: var(--accent-color);
+    }
+
+    .options-panel {
+      background: var(--panel-bg);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    .options-title {
+      margin: 0 0 15px 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    .toggle-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+    }
+
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      background: var(--bg-color);
+      padding: 8px 20px;
+      border-radius: 50px;
+      border: 1px solid var(--border-color);
+      font-weight: 500;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    
+    .toggle-label input {
+      display: none;
+    }
+
+    .toggle-label:has(input:checked) {
+      background: var(--accent-color);
+      color: white;
+      border-color: var(--accent-color);
+      box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+    }
+
+    .start-controls {
+      display: flex;
+      justify-content: center;
+      height: 50px;
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    button {
+      font-family: 'Kanit', sans-serif;
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 0 40px;
+      font-size: 1.2rem;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+      transition: all 0.2s;
+      height: 100%;
+      min-width: 200px;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #2563EB;
+      transform: translateY(-2px);
+    }
+
+    button:disabled {
+      background-color: #94A3B8;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    #game-container {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 4/3;
+      background: #CBD5E1; 
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    #placeholder-text {
+      position: absolute;
+      z-index: 10;
+      font-size: 1.5rem;
+      color: #475569;
+      font-weight: 500;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    video { display: none; } 
+
+    canvas#output_canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0; 
+      transition: opacity 0.3s ease;
+      z-index: 5;
+    }
+
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Face Inspector AI</h1>
+    <p class="subtitle">ระบบวิเคราะห์และแสดงผลโครงสร้างใบหน้า 3 มิติ</p>
+  </header>
+
+  <div class="stats-panel">
+    <div class="stat-box">ตรวจพบใบหน้า<span id="face-count">0</span></div>
+  </div>
+
+  <div class="options-panel">
+    <h2 class="options-title">เลือกการแสดงผล (Display Options)</h2>
+    <div class="toggle-group">
+      <label class="toggle-label">
+        <input type="checkbox" id="opt-box" checked> กรอบ (Bounding Box)
+      </label>
+      <label class="toggle-label">
+        <input type="checkbox" id="opt-mesh"> ตาข่าย (Mesh)
+      </label>
+      <label class="toggle-label">
+        <input type="checkbox" id="opt-contours" checked> โครงหน้า (Contours)
+      </label>
+      <label class="toggle-label">
+        <input type="checkbox" id="opt-dots"> จุดตำแหน่ง (Landmarks)
+      </label>
+    </div>
+  </div>
+
+  <div class="start-controls">
+    <button id="start-btn" disabled>กำลังโหลด AI...</button>
+  </div>
+
+  <div id="game-container">
+    <div id="placeholder-text">รอการเปิดกล้อง...</div>
+    <video id="webcam" autoplay playsinline></video>
+    <canvas id="output_canvas"></canvas>
+  </div>
+
+  <script type="module">
+    import vision from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm";
+    const { FaceLandmarker, FilesetResolver } = vision;
+
+    const video = document.getElementById("webcam");
+    const canvasElement = document.getElementById("output_canvas");
+    const canvasCtx = canvasElement.getContext("2d");
+    
+    const startBtn = document.getElementById("start-btn");
+    const placeholderText = document.getElementById("placeholder-text");
+    const faceCountElement = document.getElementById("face-count");
+
+    // UI Toggles
+    const optBox = document.getElementById("opt-box");
+    const optMesh = document.getElementById("opt-mesh");
+    const optContours = document.getElementById("opt-contours");
+    const optDots = document.getElementById("opt-dots");
+
+    let faceLandmarker = undefined;
+    let lastVideoTime = -1;
+    let cameraActive = false;
+    
+    // Anti-blip state for multiple faces
+    let lastFaces = [];
+    let missingFrames = 0;
+    const MAX_MISSING_FRAMES = 5;
+    
+    let TESSELLATION_CONNS = null;
+    let CONTOURS_CONNS = null;
+
+    async function initializeAI() {
+      const fileset = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+      );
+      
+      faceLandmarker = await FaceLandmarker.createFromOptions(fileset, {
+        baseOptions: {
+          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numFaces: 2 
+      });
+
+      // NOTE: MediaPipe officially spells Tessellation with one 'L' in their API
+      TESSELLATION_CONNS = FaceLandmarker.FACE_LANDMARKS_TESSELATION;
+      CONTOURS_CONNS = FaceLandmarker.FACE_LANDMARKS_CONTOURS;
+
+      placeholderText.innerText = "พร้อมใช้งาน";
+      startBtn.innerText = "เปิดกล้อง";
+      startBtn.disabled = false;
+    }
+
+    initializeAI();
+
+    startBtn.addEventListener("click", () => {
+      if (!faceLandmarker) return;
+
+      startBtn.disabled = true;
+      startBtn.innerText = "กำลังเชื่อมต่อกล้อง...";
+
+      if (!cameraActive) {
+        navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+          video.srcObject = stream;
+          video.addEventListener("loadeddata", () => {
+            cameraActive = true;
+            canvasElement.width = video.videoWidth;
+            canvasElement.height = video.videoHeight;
+            
+            placeholderText.style.display = "none";
+            canvasElement.style.opacity = "1";
+            document.querySelector('.start-controls').style.display = 'none';
+            
+            predictWebcam();
+          });
+        }).catch(err => {
+          placeholderText.innerText = "ไม่สามารถเปิดกล้องได้";
+          startBtn.disabled = false;
+          startBtn.innerText = "ลองอีกครั้ง";
+        });
+      }
+    });
+
+    function drawConnectors(landmarks, connections, color, lineWidth) {
+      if (!connections) return; // Fail-safe
+      canvasCtx.strokeStyle = color;
+      canvasCtx.lineWidth = lineWidth;
+      canvasCtx.beginPath();
+      for (const conn of connections) {
+        const p1 = landmarks[conn.start];
+        const p2 = landmarks[conn.end];
+        
+        const x1 = (1 - p1.x) * canvasElement.width;
+        const y1 = p1.y * canvasElement.height;
+        const x2 = (1 - p2.x) * canvasElement.width;
+        const y2 = p2.y * canvasElement.height;
+
+        canvasCtx.moveTo(x1, y1);
+        canvasCtx.lineTo(x2, y2);
+      }
+      canvasCtx.stroke();
+    }
+
+    function drawBoundingBox(landmarks) {
+      let minX = Infinity, minY = Infinity;
+      let maxX = -Infinity, maxY = -Infinity;
+
+      landmarks.forEach(p => {
+        const px = (1 - p.x) * canvasElement.width;
+        const py = p.y * canvasElement.height;
+        if (px < minX) minX = px;
+        if (px > maxX) maxX = px;
+        if (py < minY) minY = py;
+        if (py > maxY) maxY = py;
+      });
+
+      const padding = 15;
+      minX -= padding; minY -= padding;
+      maxX += padding; maxY += padding;
+
+      canvasCtx.strokeStyle = "rgba(59, 130, 246, 0.8)";
+      canvasCtx.lineWidth = 3;
+      canvasCtx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+      
+      canvasCtx.fillStyle = "rgba(59, 130, 246, 1)";
+      const cornerSize = 8;
+      canvasCtx.fillRect(minX - 2, minY - 2, cornerSize, cornerSize); 
+      canvasCtx.fillRect(maxX - cornerSize + 2, minY - 2, cornerSize, cornerSize); 
+      canvasCtx.fillRect(minX - 2, maxY - cornerSize + 2, cornerSize, cornerSize); 
+      canvasCtx.fillRect(maxX - cornerSize + 2, maxY - cornerSize + 2, cornerSize, cornerSize); 
+    }
+
+    function drawLandmarkDots(landmarks) {
+      canvasCtx.fillStyle = "rgba(16, 185, 129, 0.8)";
+      for (const p of landmarks) {
+        const x = (1 - p.x) * canvasElement.width;
+        const y = p.y * canvasElement.height;
+        canvasCtx.beginPath();
+        canvasCtx.arc(x, y, 1.5, 0, 2 * Math.PI);
+        canvasCtx.fill();
+      }
+    }
+
+    async function predictWebcam() {
+      if (!cameraActive) return;
+      
+      let startTimeMs = performance.now();
+      let results = undefined;
+      
+      if (video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        results = faceLandmarker.detectForVideo(video, startTimeMs);
+      }
+
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.translate(canvasElement.width, 0);
+      canvasCtx.scale(-1, 1);
+      canvasCtx.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.restore();
+
+      // Advanced Anti-blip Frame Smoothing for Multiple Faces
+      let currentFaces = [];
+      if (results && results.faceLandmarks && results.faceLandmarks.length > 0) {
+        currentFaces = results.faceLandmarks;
+        lastFaces = currentFaces;
+        missingFrames = 0;
+      } else {
+        if (lastFaces.length > 0 && missingFrames < MAX_MISSING_FRAMES) {
+          currentFaces = lastFaces; // Use last known positions
+          missingFrames++;
+        } else {
+          lastFaces = [];
+        }
+      }
+
+      // Update UI Count
+      faceCountElement.innerText = currentFaces.length;
+
+      // Draw active elements for all detected (or cached) faces
+      for (const landmarks of currentFaces) {
+        if (optBox.checked) {
+          drawBoundingBox(landmarks);
+        }
+        
+        if (optMesh.checked && TESSELLATION_CONNS) {
+          drawConnectors(landmarks, TESSELLATION_CONNS, "rgba(203, 213, 225, 0.3)", 0.5);
+        }
+
+        if (optContours.checked && CONTOURS_CONNS) {
+          drawConnectors(landmarks, CONTOURS_CONNS, "rgba(255, 255, 255, 0.8)", 2);
+        }
+
+        if (optDots.checked) {
+          drawLandmarkDots(landmarks);
+        }
+      }
+
+      window.requestAnimationFrame(predictWebcam);
+    }
+  </script>
+</body>
+</html>
